@@ -21,13 +21,14 @@ namespace HuSenderPokus.Worker
 
             while (true)
             {
-                if (_confirmationQueue.IsComplete)
-                {
-                    break;
-                }
                 messageToConfirm = _confirmationQueue.Dequeue();
                 if (messageToConfirm == null)
                 {
+                    if (_confirmationQueue.IsComplete)
+                    {
+                        break;
+                    }
+
                     await Task.Delay(DelayNoData);
                 }
                 else
