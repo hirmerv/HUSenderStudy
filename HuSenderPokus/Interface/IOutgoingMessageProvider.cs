@@ -7,14 +7,15 @@ using System.Threading.Tasks;
 
 namespace HuSenderPokus.Interface
 {
-    internal interface IOutgoingMessageProvider : IPartitionRemovalChecker
+    internal interface IOutgoingMessageProvider : IPartitionFilter, IPartitionRemovalChecker
     {
         bool HasMessagesInFlight { get; }
         bool QueueFull { get; }
 
         public void Enqueue(OutgoingMessageModel item);
         public OutgoingMessageModel Dequeue();
-        public OutgoingMessageModel Commit(string CRMOBEID);  // TODO: mrknout, jak m8 Radek -> parametr
+        public OutgoingMessageModel GetMessageInFlight(string CRMOBEID);
+        public void Commit(string CRMOBEID);  
         public void Retry(string CRMOBEID);
 
 

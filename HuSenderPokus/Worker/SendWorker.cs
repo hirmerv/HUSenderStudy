@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 
 namespace HuSenderPokus.Worker
 {
-    public class SendWorker : IPartitionFilter, IPartitionRemovalChecker
+    public class SendWorker 
     {
         const int DelayNoData = 1000;  // parameter in real implmementation
 
@@ -16,12 +16,7 @@ namespace HuSenderPokus.Worker
         IKafkaSender _sender;
         IConfirmationQueue _confirmationQueue;
         bool _cancelled = false;
-        OutgoingMessageModel _messageBeingCommitted;   // just to eliminate rare race condition during partition removal
 
-        public bool AllowPartitionRemoval(string partitionKey)
-        {
-            throw new NotImplementedException();
-        }
 
         public async void Execute(CancellationToken token)
         {
@@ -46,22 +41,19 @@ namespace HuSenderPokus.Worker
             }
         }
 
-        public void SetPartitions(IEnumerable<string> partitions)
-        {
-            throw new NotImplementedException();
-        }
 
         private void OnDelivery(DeliveryReport<string, OutgoingMessageModel> report)
         {
             if (report.Status==PersistenceStatus.Persisted)
             {
                 // use instance level variable to potentially block partition removal during this operation
-                _messageBeingCommitted = _outgoingMessageProvider.Commit(report.Key);
-                _messageBeingCommitted.TargetOffset = report.Offset;
-                _messageBeingCommitted.TargetPartitionKey = report.Partition.ToString();
-                _messageBeingCommitted.ProcessStatus = OutgoingMessageProcessStatus.Sent;
-                _confirmationQueue.Enqueue(_messageBeingCommitted);
-                _messageBeingCommitted = null;
+                var messageBeingCommitted = _outgoingMessageProvider.GetMessageInFlight(report.Key);
+                messageBeingCommitted.TargetOffset = report.Offset;
+                messageBeingCommitted.TargetPartitionKey = report.Partition.ToString();
+                messageBeingCommitted.ProcessStatus = OutgoingMessageProcessStatus.Sent;
+                // the order of the following two lines is important for preventing potential race condition when releasing partition
+                _confirmationQueue.Enqueue(messageBeingCommitted);
+                _outgoingMessageProvider.Commit(messageBeingCommitted.CRMOBEID);
                 if (_cancelled && !_outgoingMessageProvider.HasMessagesInFlight)
                 {
                     _confirmationQueue.MarkComplete();

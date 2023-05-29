@@ -17,6 +17,7 @@ namespace HuSenderPokus.Model
         ConcurrentQueue<OutgoingMessageModel> _outgoingMessageQueue;
         ConcurrentQueue<string> _processedObeQueue;
         IMessagesInProgress _messagesInProgress;
+        IEnumerable<string> _partitions;
 
         public bool HasMessagesInFlight => _messagesInProgress.HasMessagesInFlight;
 
@@ -30,31 +31,50 @@ namespace HuSenderPokus.Model
 
         public OutgoingMessageModel? Dequeue()
         {
-            OutgoingMessageModel message;
-            while (true)
+            lock (this)     // possible collision with AllowPartitionRemoval
             {
-                string processedObe;
-                if (!_processedObeQueue.TryDequeue(out processedObe))
-                    // no response to process, continue with normal processing
-                    break;  
-                if (_messagesInProgress.TryDequeue(processedObe, out message))
+                OutgoingMessageModel message = null;
+                while (true)
                 {
-                    return message;
+                    string processedObe;
+                    if (!_processedObeQueue.TryDequeue(out processedObe))
+                        // no response to process, continue with normal processing
+                        break;
+                    if (_messagesInProgress.TryDequeue(processedObe, out message) && _partitions.Contains(message.PartitinoKey))
+                    {
+                        break;
+                    }
                 }
+                if (message == null)
+                {
+                    while (true)
+                    {
+                        if (!_outgoingMessageQueue.TryDequeue(out message))
+                            return null;
+
+                        if (_partitions.Contains(message.PartitinoKey))
+                            break;
+                    }
+                }
+
+                if (message != null)
+                {
+                    _messagesInProgress.RegisterMessage(message);
+                }
+                return message;
             }
-            _ = _outgoingMessageQueue.TryDequeue(out message);
-            if (message!=null)
-            {
-                _messagesInProgress.RegisterMessage(message);
-            }
-            return message;
         }
 
-        public OutgoingMessageModel Commit(string CRMOBEID)
+        public OutgoingMessageModel GetMessageInFlight(string CRMOBEID)
         {
-            var message = _messagesInProgress.Commit(CRMOBEID);
+            return _messagesInProgress.GetMessageInFlight(CRMOBEID);
+        }
+
+
+        public void Commit(string CRMOBEID)
+        {
+            _messagesInProgress.Commit(CRMOBEID);
             _processedObeQueue.Enqueue(CRMOBEID);
-            return message;
         }
 
 
@@ -62,6 +82,19 @@ namespace HuSenderPokus.Model
         {
             _messagesInProgress.Retry(CRMOBEID);
             _processedObeQueue.Enqueue(CRMOBEID);
+        }
+
+        public void SetPartitions(IEnumerable<string> partitions)
+        {
+            _partitions = partitions;
+        }
+
+        public bool AllowPartitionRemoval(string partitionKey)
+        {
+            lock (this)
+            {
+                return _messagesInProgress.AllowPartitionRemoval(partitionKey);
+            }
         }
     }
 }

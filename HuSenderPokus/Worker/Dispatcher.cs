@@ -50,15 +50,13 @@ namespace HuSenderPokus.Worker
             bool changed = _partitionStatus.CheckUpdates();
             if (changed)
             {
-                // TODO set partitions for reader and sender worker
                 _inputWorker.SetPartitions(_partitionStatus.ActivePartitions);
-                _sendWorker.SetPartitions(_partitionStatus.ActivePartitions);
+                _outgoingMessageProvider.SetPartitions(_partitionStatus.ActivePartitions);
             }
             foreach (string partitionKey in  _partitionStatus.PartitionWaitingForRemoval)
             {
                 if (_outgoingMessageProvider.AllowPartitionRemoval(partitionKey) 
-                    && _sendWorker.AllowPartitionRemoval(partitionKey)
-                    && _confirmationQueue.AllowPartitionRemoval(partitionKey))
+                   && _confirmationQueue.AllowPartitionRemoval(partitionKey))
                 {
                     _partitionStatus.ConfirmPartitionRemoval(partitionKey);
                 }

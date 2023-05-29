@@ -40,6 +40,16 @@ namespace HuSenderPokus.Model
             return _obeDict[obeId].TryDequeue(out message);
         }
 
+        public OutgoingMessageModel GetMessageInFlight(string obeId)
+        {
+            return _obeDict[obeId].MessageInFlight;
+        }
+
+        public bool AllowPartitionRemoval(string partitionKey)
+        {
+            return !_obeDict.Any(kvp => kvp.Value.MessageInFlight?.PartitinoKey == partitionKey);
+        }
+
         public bool HasMessagesInFlight => _obeDict.Any(x => x.Value.MessageInFlight != null);   
 
     }

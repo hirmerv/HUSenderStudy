@@ -15,6 +15,7 @@ namespace HuSenderPokus.Worker
 
         IMessageReader _messageReader;
         IOutgoingMessageProvider _outgoingMessageProvider;
+        IEnumerable<string> _partitions;
 
         public async void Execute(CancellationToken token)
         {
@@ -39,6 +40,9 @@ namespace HuSenderPokus.Worker
                 {
                     foreach (var message in messagesRead)
                     {
+                        // we can filter messages for partitions here or in the MessageReader or in both
+                        if (!_partitions.Contains(message.PartitinoKey))
+                            continue;
                         _outgoingMessageProvider.Enqueue(message);
                     }
                 }
@@ -47,7 +51,8 @@ namespace HuSenderPokus.Worker
 
         public void SetPartitions(IEnumerable<string> partitions)
         {
-            throw new NotImplementedException();
+            _partitions = partitions;
+            _messageReader.SetPartitions(partitions);
         }
     }
 }

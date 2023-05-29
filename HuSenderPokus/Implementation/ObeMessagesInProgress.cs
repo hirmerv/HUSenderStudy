@@ -11,7 +11,7 @@ namespace HuSenderPokus.Model
         OutgoingMessageModel _messageInFlight;
         List<OutgoingMessageModel> _waitingList;
 
-        public object MessageInFlight => _messageInFlight;
+        public OutgoingMessageModel MessageInFlight => _messageInFlight;
 
         internal static ObeMessagesInProgress Create(OutgoingMessageModel message)
         {

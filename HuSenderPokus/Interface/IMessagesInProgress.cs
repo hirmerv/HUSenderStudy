@@ -16,5 +16,7 @@ namespace HuSenderPokus.Interface
         void RegisterMessage(OutgoingMessageModel message);
 
         bool HasMessagesInFlight { get; }
+
+        OutgoingMessageModel GetMessageInFlight(string cRMOBEID);
     }
 }
