@@ -1,0 +1,7 @@
+﻿################################################################################
+# This .gitignore file was automatically created by Microsoft(R) Visual Studio.
+################################################################################
+
+/.vs/HuSenderPokus/DesignTimeBuild/.dtbcache.v2
+/.vs/HuSenderPokus/v17/TestStore/0
+/.vs/HuSenderPokus/v17
